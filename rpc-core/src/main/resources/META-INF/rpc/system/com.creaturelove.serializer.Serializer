@@ -1,0 +1,4 @@
+jdk=com.creaturelove.serializer.JdkSerializer
+hessian=com.creaturelove.serializer.HessianSerializer
+json=com.creaturelove.serializer.JsonSerializer
+kryo=com.creaturelove.serializer.KryoSerializer
