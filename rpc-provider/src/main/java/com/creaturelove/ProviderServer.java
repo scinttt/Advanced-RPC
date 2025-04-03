@@ -14,11 +14,14 @@ public class ProviderServer
 {
     public static void main( String[] args )
     {
+        //RPC Initialization
+        RpcApplication.init();
+
         // register the service
         LocalRegistry.register(UserService.class.getName(), UserServiceImpl.class);
 
         // start http server at provider side
         HttpServer httpServer = new VertxHttpServer();
-        httpServer.doStart(8080);
+        httpServer.doStart(RpcApplication.getRpcConfig().getServerPort());
     }
 }
