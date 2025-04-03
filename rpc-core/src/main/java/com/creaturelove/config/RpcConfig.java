@@ -1,5 +1,7 @@
 package com.creaturelove.config;
 
+import com.creaturelove.serializer.Serializer;
+import com.creaturelove.serializer.SerializerKeys;
 import lombok.Data;
 
 @Data
@@ -18,4 +20,7 @@ public class RpcConfig {
 
     // mock call
     private boolean mock = false;
+
+    // Serializer
+    private String serializer = SerializerKeys.JDK;
 }

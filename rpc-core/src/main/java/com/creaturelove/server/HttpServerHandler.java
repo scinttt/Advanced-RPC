@@ -1,10 +1,12 @@
 package com.creaturelove.server;
 
+import com.creaturelove.RpcApplication;
 import com.creaturelove.model.RpcRequest;
 import com.creaturelove.model.RpcResponse;
 import com.creaturelove.registry.LocalRegistry;
 import com.creaturelove.serializer.JdkSerializer;
 import com.creaturelove.serializer.Serializer;
+import com.creaturelove.serializer.SerializerFactory;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
@@ -16,8 +18,9 @@ import java.lang.reflect.Method;
 public class HttpServerHandler implements Handler<HttpServerRequest> {
     @Override
     public void handle(HttpServerRequest request){
-        final Serializer serializer = new JdkSerializer();
+        final Serializer serializer = SerializerFactory.getInstance(RpcApplication.getRpcConfig().getSerializer());
 
+        // 指定序列化器
         System.out.println("Received request: " + request.method() + " " + request.uri());
 
         // asynchronously handle http request
