@@ -12,4 +12,14 @@ public class ServiceProxyFactory {
                 new ServiceProxy()
         );
     }
+
+    // retrieve mock proxy object based on the service class
+    public static <T> T getMockProxy(Class<T> serviceClass){
+        return (T) Proxy.newProxyInstance(
+                serviceClass.getClassLoader(),
+                new Class[]{serviceClass},
+                new MockServiceProxy()
+        );
+    }
+
 }

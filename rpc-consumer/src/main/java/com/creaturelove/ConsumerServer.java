@@ -19,7 +19,14 @@ public class ConsumerServer
         RpcConfig rpc = ConfigUtils.loadConfig(RpcConfig.class, "rpc");
         System.out.println(rpc);
 
-        UserService userService = ServiceProxyFactory.getProxy(UserService.class);
+        UserService userService = null;
+
+        if(rpc.isMock()){
+            userService = ServiceProxyFactory.getMockProxy(UserService.class);
+        }else{
+            userService = ServiceProxyFactory.getProxy(UserService.class);
+        }
+
         User user = new User();
         user.setName("Creaturelove");
 
@@ -31,5 +38,8 @@ public class ConsumerServer
         }else{
             System.out.println("User doesn't exist");
         }
+
+        long number = userService.getNumber();
+        System.out.println(number);
     }
 }

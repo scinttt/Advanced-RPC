@@ -1,6 +1,5 @@
 package com.creaturelove.proxy;
 
-import jdk.jpackage.internal.Log;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
