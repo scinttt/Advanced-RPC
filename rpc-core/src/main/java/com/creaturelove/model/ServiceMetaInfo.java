@@ -1,5 +1,7 @@
 package com.creaturelove.model;
 
+import cn.hutool.core.util.StrUtil;
+
 public class ServiceMetaInfo {
     private String serviceName;
 
@@ -17,5 +19,12 @@ public class ServiceMetaInfo {
 
     public String getServiceNodeKey(){
         return String.format("%s/%s:%s", getServiceNodeKey(), serviceHost, servicePort);
+    }
+
+    public String getServiceAddress(){
+        if(!StrUtil.contains(serviceHost, "http")){
+            return String.format("http://%s:%s", serviceHost, servicePort);
+        }
+        return String.format("%s:%s", serviceHost, servicePort);
     }
 }
