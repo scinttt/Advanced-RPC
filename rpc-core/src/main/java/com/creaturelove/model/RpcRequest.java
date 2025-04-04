@@ -1,5 +1,6 @@
 package com.creaturelove.model;
 
+import com.creaturelove.constant.RpcConstant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,8 @@ public class RpcRequest implements Serializable {
 
     // method name
     private String methodName;
+
+    private String serviceVersion = RpcConstant.DEFAULT_SERVICE_VERSION;
 
     // parameter type array
     private Class<?>[] parameterTypes;
