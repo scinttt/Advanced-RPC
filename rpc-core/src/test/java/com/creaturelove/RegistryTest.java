@@ -63,4 +63,12 @@ public class RegistryTest {
         List<ServiceMetaInfo> serviceMetaInfoList = registry.serviceDiscovery(serviceKey);
         Assert.assertNotNull(serviceMetaInfoList);
     }
+
+    @Test
+    public void hearBeat() throws Exception{
+        // Health Check is executed in the init() method
+        register();
+        // block for 1 minutes
+        Thread.sleep(60 * 1000L);
+    }
 }
