@@ -4,16 +4,13 @@ import cn.hutool.json.JSONUtil;
 import com.creaturelove.config.RegistryConfig;
 import com.creaturelove.model.ServiceMetaInfo;
 import io.etcd.jetcd.*;
-import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.PutOption;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.GregorianCalendar;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+
 import java.util.stream.Collectors;
 
 public class EtcdRegistry implements Registry {
