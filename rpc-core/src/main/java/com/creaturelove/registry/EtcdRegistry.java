@@ -34,6 +34,9 @@ public class EtcdRegistry implements Registry {
                 .connectTimeout(Duration.ofMillis(registryConfig.getTimeout()))
                 .build();
         kvClient = client.getKVClient();
+
+        // Enable Health Check
+        heartBeat();
     }
 
     @Override
