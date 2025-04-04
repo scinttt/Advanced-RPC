@@ -94,6 +94,14 @@ public class EtcdRegistry implements Registry {
     public void destroy(){
         System.out.println("Current Node Destroy");
 
+        for(String key : localRegisterNodeKeySet){
+            try{
+                kvClient.delete(ByteSequence.from(key, StandardCharsets.UTF_8)).get();
+            }catch(Exception e){
+                throw new RuntimeException(key + "Failed to turn down the node");
+            }
+        }
+
         // Release resources
         if(kvClient != null){
             kvClient.close();
