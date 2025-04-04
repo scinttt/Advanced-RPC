@@ -1,7 +1,9 @@
 package com.creaturelove.model;
 
 import cn.hutool.core.util.StrUtil;
+import lombok.Data;
 
+@Data
 public class ServiceMetaInfo {
     private String serviceName;
 
@@ -18,7 +20,7 @@ public class ServiceMetaInfo {
     }
 
     public String getServiceNodeKey(){
-        return String.format("%s/%s:%s", getServiceNodeKey(), serviceHost, servicePort);
+        return String.format("%s/%s:%s", getServiceKey(), serviceHost, servicePort);
     }
 
     public String getServiceAddress(){
