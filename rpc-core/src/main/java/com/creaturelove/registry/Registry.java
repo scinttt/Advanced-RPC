@@ -21,4 +21,7 @@ public interface Registry {
 
     // Service Destroy
     void destroy();
+
+    // health check
+    void heartBeat();
 }

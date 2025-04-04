@@ -1,5 +1,8 @@
 package com.creaturelove.registry;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.cron.CronUtil;
+import cn.hutool.cron.task.Task;
 import cn.hutool.json.JSONUtil;
 import com.creaturelove.config.RegistryConfig;
 import com.creaturelove.model.ServiceMetaInfo;
@@ -9,8 +12,10 @@ import io.etcd.jetcd.options.PutOption;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class EtcdRegistry implements Registry {
@@ -19,6 +24,8 @@ public class EtcdRegistry implements Registry {
     private KV kvClient;
 
     private static final String ETCD_ROOT_PATH = "/rpc/";
+
+    private final Set<String> localRegisterNodeKeySet = new HashSet<>();
 
     @Override
     public void init(RegistryConfig registryConfig){
@@ -45,10 +52,17 @@ public class EtcdRegistry implements Registry {
         // connect the key-value pair with the lease, and set TTL
         PutOption putOption = PutOption.builder().withLeaseId(leaseId).build();
         kvClient.put(key, value, putOption).get();
+
+        // Add node info to local cache
+        localRegisterNodeKeySet.add(registerKey);
     }
 
     public void unRegister(ServiceMetaInfo serviceMetaInfo){
-        kvClient.delete(ByteSequence.from(ETCD_ROOT_PATH + serviceMetaInfo.getServiceNodeKey(), StandardCharsets.UTF_8));
+        String registerKey = ETCD_ROOT_PATH + serviceMetaInfo.getServiceNodeKey();
+        kvClient.delete(ByteSequence.from(registerKey, StandardCharsets.UTF_8));
+
+        //Remove from local cache
+        localRegisterNodeKeySet.remove(registerKey);
     }
 
     public List<ServiceMetaInfo> serviceDiscovery(String serviceKey){
@@ -84,6 +98,38 @@ public class EtcdRegistry implements Registry {
         if(client != null){
             client.close();
         }
+    }
+
+    @Override
+    public void heartBeat(){
+        // continue every 10s
+        CronUtil.schedule("*/10 * * * * *", new Task(){
+            @Override
+            public void execute(){
+                for(String key : localRegisterNodeKeySet){
+                    try{
+                        List<KeyValue> keyValues = kvClient.get(ByteSequence.from(key, StandardCharsets.UTF_8))
+                                .get()
+                                .getKvs();
+                        // node is expired(need restart to reRegister)
+                        if(CollUtil.isEmpty(keyValues)){
+                            continue;
+                        }
+                        // node is not expired, reRegister
+                        KeyValue keyValue = keyValues.get(0);
+                        String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
+                        ServiceMetaInfo serviceMetaInfo = JSONUtil.toBean(value, ServiceMetaInfo.class);
+                        register(serviceMetaInfo);
+                    }catch(Exception e){
+                        throw new RuntimeException(key + "failed to continue the lease", e);
+                    }
+                }
+            }
+        });
+
+        // support second level cronjob
+        CronUtil.setMatchSecond(true);
+        CronUtil.start();
     }
 
 //    public static void main(String[] args) throws ExecutionException, InterruptedException {
