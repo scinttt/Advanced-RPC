@@ -16,7 +16,9 @@ import java.lang.reflect.Method;
 public class ServiceProxy implements InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable{
-        Serializer serializer = SerializerFactory.getInstance(RpcApplication.getRpcConfig().getSerializer());
+         //final Serializer serializer = new JdkSerializer();
+
+        final Serializer serializer = SerializerFactory.getInstance(RpcApplication.getRpcConfig().getSerializer());
 
         RpcRequest rpcRequest = RpcRequest.builder()
                 .serviceName(method.getDeclaringClass().getName())
@@ -28,7 +30,7 @@ public class ServiceProxy implements InvocationHandler {
         try{
             byte[] bytes = serializer.serialize(rpcRequest);
 
-            try(HttpResponse httpResponse = HttpRequest.post("http://localhost:8080")
+            try(HttpResponse httpResponse = HttpRequest.post("http://" + RpcApplication.getRpcConfig().getServerHost() + ":" + RpcApplication.getRpcConfig().getServerPort())
                     .body(bytes)
                     .execute()
             ){
