@@ -27,6 +27,8 @@ public class EtcdRegistry implements Registry {
 
     private final Set<String> localRegisterNodeKeySet = new HashSet<>();
 
+    private final RegistryServiceCache registryServiceCache = new RegistryServiceCache();
+
     @Override
     public void init(RegistryConfig registryConfig){
         client = Client.builder()
@@ -60,6 +62,7 @@ public class EtcdRegistry implements Registry {
         localRegisterNodeKeySet.add(registerKey);
     }
 
+    @Override
     public void unRegister(ServiceMetaInfo serviceMetaInfo){
         String registerKey = ETCD_ROOT_PATH + serviceMetaInfo.getServiceNodeKey();
         kvClient.delete(ByteSequence.from(registerKey, StandardCharsets.UTF_8));
@@ -68,7 +71,15 @@ public class EtcdRegistry implements Registry {
         localRegisterNodeKeySet.remove(registerKey);
     }
 
+    @Override
     public List<ServiceMetaInfo> serviceDiscovery(String serviceKey){
+        // Retrieve service from cache in priority
+        List<ServiceMetaInfo> cachedServiceMetaInfoList = registryServiceCache.readCache();
+        if(cachedServiceMetaInfoList != null){
+            return cachedServiceMetaInfoList;
+        }
+
+        // prefix search, tail '/' is necessary
         String searchPrefix = ETCD_ROOT_PATH + serviceKey + "/";
 
         try{
@@ -80,17 +91,22 @@ public class EtcdRegistry implements Registry {
                     .get()
                     .getKvs();
             // parse service info
-            return keyValues.stream()
+            List<ServiceMetaInfo> serviceMetaInfoList = keyValues.stream()
                     .map(keyValue -> {
                         String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
                         return JSONUtil.toBean(value, ServiceMetaInfo.class);
                     })
                     .collect(Collectors.toList());
+
+            // write services into the cache
+            registryServiceCache.writeCache(serviceMetaInfoList);
+            return serviceMetaInfoList;
         }catch(Exception e){
             throw new RuntimeException("Failed to retrieve the service list", e);
         }
     }
 
+    @Override
     public void destroy(){
         System.out.println("Current Node Destroy");
 
