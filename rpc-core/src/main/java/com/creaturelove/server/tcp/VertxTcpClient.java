@@ -9,7 +9,6 @@ public class VertxTcpClient {
         Vertx vertx = Vertx.vertx();
 
         vertx.createNetClient().connect(8888, "localhost", result -> {
-
             if(result.succeeded()){
                 System.out.println("Connected to TCP server");
                 io.vertx.core.net.NetSocket socket = result.result();
@@ -21,7 +20,6 @@ public class VertxTcpClient {
                 socket.handler(buffer -> {
                     System.out.println("Received response from server: " + buffer.toString());
                 });
-                
             }else{
                 System.err.println("Failed to connect to TCP server");
             }
@@ -33,3 +31,4 @@ public class VertxTcpClient {
     }
 
 }
+
