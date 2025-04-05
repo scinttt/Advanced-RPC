@@ -9,6 +9,7 @@ public class VertxTcpClient {
         Vertx vertx = Vertx.vertx();
 
         vertx.createNetClient().connect(8888, "localhost", result -> {
+
             if(result.succeeded()){
                 System.out.println("Connected to TCP server");
                 io.vertx.core.net.NetSocket socket = result.result();
