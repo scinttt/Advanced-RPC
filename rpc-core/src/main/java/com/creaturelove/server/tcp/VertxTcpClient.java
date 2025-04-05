@@ -20,6 +20,7 @@ public class VertxTcpClient {
                 socket.handler(buffer -> {
                     System.out.println("Received response from server: " + buffer.toString());
                 });
+                
             }else{
                 System.err.println("Failed to connect to TCP server");
             }
