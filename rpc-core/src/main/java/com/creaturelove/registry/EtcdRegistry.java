@@ -137,26 +137,23 @@ public class EtcdRegistry implements Registry {
     @Override
     public void heartBeat(){
         // continue every 10s
-        CronUtil.schedule("*/10 * * * * *", new Task(){
-            @Override
-            public void execute(){
-                for(String key : localRegisterNodeKeySet){
-                    try{
-                        List<KeyValue> keyValues = kvClient.get(ByteSequence.from(key, StandardCharsets.UTF_8))
-                                .get()
-                                .getKvs();
-                        // node is expired(need restart to reRegister)
-                        if(CollUtil.isEmpty(keyValues)){
-                            continue;
-                        }
-                        // node is not expired, reRegister
-                        KeyValue keyValue = keyValues.get(0);
-                        String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
-                        ServiceMetaInfo serviceMetaInfo = JSONUtil.toBean(value, ServiceMetaInfo.class);
-                        register(serviceMetaInfo);
-                    }catch(Exception e){
-                        throw new RuntimeException(key + "failed to continue the lease", e);
+        CronUtil.schedule("*/10 * * * * *", (Task) () -> {
+            for(String key : localRegisterNodeKeySet){
+                try{
+                    List<KeyValue> keyValues = kvClient.get(ByteSequence.from(key, StandardCharsets.UTF_8))
+                            .get()
+                            .getKvs();
+                    // node is expired(need restart to reRegister)
+                    if(CollUtil.isEmpty(keyValues)){
+                        continue;
                     }
+                    // node is not expired, reRegister
+                    KeyValue keyValue = keyValues.get(0);
+                    String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
+                    ServiceMetaInfo serviceMetaInfo = JSONUtil.toBean(value, ServiceMetaInfo.class);
+                    register(serviceMetaInfo);
+                }catch(Exception e){
+                    throw new RuntimeException(key + "failed to continue the lease", e);
                 }
             }
         });

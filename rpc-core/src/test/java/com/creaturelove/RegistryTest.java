@@ -4,12 +4,10 @@ import com.creaturelove.config.RegistryConfig;
 import com.creaturelove.model.ServiceMetaInfo;
 import com.creaturelove.registry.EtcdRegistry;
 import com.creaturelove.registry.Registry;
-import org.checkerframework.checker.units.qual.C;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.security.Provider;
 import java.util.List;
 
 public class RegistryTest {
