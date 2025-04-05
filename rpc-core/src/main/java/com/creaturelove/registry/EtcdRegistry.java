@@ -97,6 +97,9 @@ public class EtcdRegistry implements Registry {
             // parse service info
             List<ServiceMetaInfo> serviceMetaInfoList = keyValues.stream()
                     .map(keyValue -> {
+                        String key = keyValue.getKey().toString(StandardCharsets.UTF_8);
+                        // listen the change of key
+                        watch(key);
                         String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
                         return JSONUtil.toBean(value, ServiceMetaInfo.class);
                     })
