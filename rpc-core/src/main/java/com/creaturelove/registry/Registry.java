@@ -24,4 +24,7 @@ public interface Registry {
 
     // health check
     void heartBeat();
+
+    // listening
+    void watch(String serviceNodeKey);
 }
