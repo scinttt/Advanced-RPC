@@ -18,7 +18,7 @@ public class TcpServerHandler implements Handler<NetSocket> {
     @Override
     public void handle(NetSocket netSocket) {
         // handle connection
-        netSocket.handler(buffer -> {
+        TcpBufferHandlerWrapper bufferHandlerWrapper = new TcpBufferHandlerWrapper(buffer -> {
             // accept and decode request
             ProtocolMessage<RpcRequest> protocolMessage;
             try {
@@ -57,5 +57,7 @@ public class TcpServerHandler implements Handler<NetSocket> {
                 throw new RuntimeException("Fail to encode protocol message");
             }
         });
+
+        netSocket.handler(bufferHandlerWrapper);
     }
 }
