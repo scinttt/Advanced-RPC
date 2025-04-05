@@ -4,9 +4,6 @@ import com.creaturelove.server.HttpServer;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetServer;
-import sun.jvmstat.perfdata.monitor.PerfStringVariableMonitor;
-
-import java.nio.charset.StandardCharsets;
 
 public class VertxTcpServer implements HttpServer {
     private byte[] handleRequest(byte[] requestData) {
