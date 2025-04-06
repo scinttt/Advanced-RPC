@@ -46,7 +46,7 @@ public class VertxTcpClient {
                         Buffer encodeBuffer = ProtocolMessageEncoder.encode(protocolMessage);
                         socket.write(encodeBuffer);
                     } catch (IOException e) {
-                        throw new RuntimeException("协议消息编码错误");
+                        throw new RuntimeException("Fail to encode protocol message");
                     }
 
                     // Receive responses
@@ -56,8 +56,8 @@ public class VertxTcpClient {
                                     ProtocolMessage<RpcResponse> rpcResponseProtocolMessage =
                                             (ProtocolMessage<RpcResponse>) ProtocolMessageDecoder.decode(buffer);
                                     responseFuture.complete(rpcResponseProtocolMessage.getBody());
-                                } catch (IOException e) {
-                                    throw new RuntimeException("协议消息解码错误");
+                                } catch (Exception e) {
+                                    throw new RuntimeException("Fail to decode protocol message");
                                 }
                             }
                     );
