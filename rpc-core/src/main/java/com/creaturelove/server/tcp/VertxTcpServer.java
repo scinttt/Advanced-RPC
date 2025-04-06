@@ -19,37 +19,7 @@ public class VertxTcpServer implements HttpServer {
         NetServer server = vertx.createNetServer();
 
         // handle request
-        server.connectHandler(socket -> {
-            // construct parser
-            RecordParser parser = RecordParser.newFixed(8);
-            parser.setOutput(new Handler<Buffer>() {
-                // initialization
-                int size = -1;
-                // get（header + body）
-                Buffer resultBuffer = Buffer.buffer();
-
-                @Override
-                public void handle(Buffer buffer) {
-                    if (-1 == size) {
-                        // get message body length
-                        size = buffer.getInt(4);
-                        parser.fixedSizeMode(size);
-                        // write header info to result
-                        resultBuffer.appendBuffer(buffer);
-                    } else {
-                        // write body info to result
-                        resultBuffer.appendBuffer(buffer);
-                        System.out.println(resultBuffer.toString());
-                        // do it again
-                        parser.fixedSizeMode(8);
-                        size = -1;
-                        resultBuffer = Buffer.buffer();
-                    }
-                }
-            });
-
-            socket.handler(parser);
-        });
+        server.connectHandler(new TcpServerHandler());
 
         // start the TCP server and listen the specific port
         server.listen(port, result -> {

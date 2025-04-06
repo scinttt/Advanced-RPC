@@ -1,0 +1,3 @@
+roundRobin=com.creaturelove.loadbalancer.RoundRobinLoadBalancer
+random=com.creaturelove.loadbalancer.RandomLoadBalancer
+consistentHash=com.creaturelove.loadbalancer.ConsistentHashLoadBalancer

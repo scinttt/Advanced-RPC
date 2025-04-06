@@ -8,6 +8,7 @@ import com.creaturelove.registry.Registry;
 import com.creaturelove.registry.RegistryFactory;
 import com.creaturelove.server.HttpServer;
 import com.creaturelove.server.VertxHttpServer;
+import com.creaturelove.server.tcp.VertxTcpServer;
 import com.creaturelove.service.UserService;
 import com.creaturelove.serviceImpl.UserServiceImpl;
 
@@ -41,8 +42,11 @@ public class ProviderServer
             throw new RuntimeException(e);
         }
 
-        // start http server at provider side
-        HttpServer httpServer = new VertxHttpServer();
-        httpServer.doStart(RpcApplication.getRpcConfig().getServerPort());
+        VertxTcpServer vertxTcpServer = new VertxTcpServer();
+        vertxTcpServer.doStart(8080);
+
+//        // start http server at provider side
+//        HttpServer httpServer = new VertxHttpServer();
+//        httpServer.doStart(RpcApplication.getRpcConfig().getServerPort());
     }
 }
