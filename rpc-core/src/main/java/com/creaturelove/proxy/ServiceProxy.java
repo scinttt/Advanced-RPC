@@ -1,8 +1,7 @@
 package com.creaturelove.proxy;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
+
 import com.creaturelove.RpcApplication;
 import com.creaturelove.config.RpcConfig;
 import com.creaturelove.constant.RpcConstant;
@@ -11,33 +10,31 @@ import com.creaturelove.model.RpcResponse;
 import com.creaturelove.model.ServiceMetaInfo;
 import com.creaturelove.registry.Registry;
 import com.creaturelove.registry.RegistryFactory;
-import com.creaturelove.serializer.JdkSerializer;
-import com.creaturelove.serializer.Serializer;
-import com.creaturelove.serializer.SerializerFactory;
+import com.creaturelove.server.tcp.VertxTcpClient;
+import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.security.Provider;
 import java.util.List;
 
+@Slf4j
 public class ServiceProxy implements InvocationHandler {
     @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable{
-         //final Serializer serializer = new JdkSerializer();
+    public Object invoke(Object proxy, Method method, Object[] args){
+         // final Serializer serializer = new JdkSerializer();
 
-        final Serializer serializer = SerializerFactory.getInstance(RpcApplication.getRpcConfig().getSerializer());
+//        final Serializer serializer = SerializerFactory.getInstance(RpcApplication.getRpcConfig().getSerializer());
 
+        // Construct request
+        String serviceName = method.getDeclaringClass().getName();
         RpcRequest rpcRequest = RpcRequest.builder()
-                .serviceName(method.getDeclaringClass().getName())
+                .serviceName(serviceName)
                 .methodName(method.getName())
                 .parameterTypes(method.getParameterTypes())
                 .args(args)
                 .build();
 
         try{
-            byte[] bytes = serializer.serialize(rpcRequest);
-
             // get provider address from registry center
             RpcConfig rpcConfig = RpcApplication.getRpcConfig();
             Registry registry = RegistryFactory.getInstance(rpcConfig.getRegistryConfig().getRegistry());
@@ -54,20 +51,27 @@ public class ServiceProxy implements InvocationHandler {
             // get first one
             ServiceMetaInfo selectedServiceMetaInfo = serviceMetaInfoList.get(0);
 
-            try(HttpResponse httpResponse = HttpRequest.post(selectedServiceMetaInfo.getServiceAddress())
-                    .body(bytes)
-                    .execute()
-            ){
-                byte[] result = httpResponse.bodyBytes();
+            // send TCP request
+            RpcResponse rpcResponse = VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo);
+            return rpcResponse.getData();
 
-                // deserialization
-                RpcResponse rpcResponse = serializer.deserialize(result, RpcResponse.class);
-                return rpcResponse.getData();
-            }
-        }catch(IOException e){
-            e.printStackTrace();
+
+              // http protocol
+//            try(HttpResponse httpResponse = HttpRequest.post(selectedServiceMetaInfo.getServiceAddress())
+//                    .body(bytes)
+//                    .execute()
+//            ){
+//                byte[] result = httpResponse.bodyBytes();
+//
+//                // deserialization
+//                RpcResponse rpcResponse = serializer.deserialize(result, RpcResponse.class);
+//                return rpcResponse.getData();
+//            }
+        }catch(Exception e){
+            log.error(e.getMessage());
         }
 
         return null;
     }
 }
+
