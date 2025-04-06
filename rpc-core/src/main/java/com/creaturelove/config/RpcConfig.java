@@ -1,5 +1,6 @@
 package com.creaturelove.config;
 
+import com.creaturelove.loadbalancer.LoadBalancerKeys;
 import com.creaturelove.serializer.Serializer;
 import com.creaturelove.serializer.SerializerKeys;
 import lombok.Data;
@@ -26,4 +27,7 @@ public class RpcConfig {
 
     // Registry Configuration
     private RegistryConfig registryConfig = new RegistryConfig();
+
+    // Load Balancer
+    private String loadBalancer = LoadBalancerKeys.ROUND_ROBIN;
 }
