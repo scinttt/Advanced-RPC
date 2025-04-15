@@ -5,6 +5,8 @@ import cn.hutool.core.collection.CollUtil;
 import com.creaturelove.RpcApplication;
 import com.creaturelove.config.RpcConfig;
 import com.creaturelove.constant.RpcConstant;
+import com.creaturelove.fault.retry.RetryStrategy;
+import com.creaturelove.fault.retry.RetryStrategyFactory;
 import com.creaturelove.loadbalancer.LoadBalancer;
 import com.creaturelove.loadbalancer.LoadBalancerFactory;
 import com.creaturelove.model.RpcRequest;
@@ -61,8 +63,14 @@ public class ServiceProxy implements InvocationHandler {
             requestParams.put("methodName", rpcRequest.getMethodName());
             ServiceMetaInfo selectedServiceMetaInfo = loadBalancer.select(requestParams, serviceMetaInfoList);
 
-            // rpc request
-            RpcResponse rpcResponse = VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo);
+            // rpc request with retry mechanism
+            RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
+            RpcResponse rpcResponse = retryStrategy.doRetry(() ->
+                    VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo)
+            );
+//            // rpc request without retry mechanism using tcp protocol
+//            RpcResponse rpcResponse = VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo);
+
             return rpcResponse.getData();
 
 
