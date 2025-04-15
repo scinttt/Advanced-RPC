@@ -1,7 +1,7 @@
 package com.creaturelove.config;
 
+import com.creaturelove.fault.retry.RetryStrategyKeys;
 import com.creaturelove.loadbalancer.LoadBalancerKeys;
-import com.creaturelove.serializer.Serializer;
 import com.creaturelove.serializer.SerializerKeys;
 import lombok.Data;
 
@@ -30,4 +30,7 @@ public class RpcConfig {
 
     // Load Balancer
     private String loadBalancer = LoadBalancerKeys.ROUND_ROBIN;
+
+    // retry strategy
+    private String retryStrategy = RetryStrategyKeys.NO;
 }

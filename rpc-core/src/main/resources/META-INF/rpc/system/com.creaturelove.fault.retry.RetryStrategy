@@ -1,0 +1,2 @@
+no=com.creaturelove.fault.retry.NoRetryStrategy
+fixedInterval=com.creaturelove.fault.retry.FixedIntervalRetryStrategy
