@@ -1,0 +1,4 @@
+failBack=com.creaturelove.fault.tolerant.FailBackTolerantStrategy
+failFast=com.creaturelove.fault.tolerant.FailFastTolerantStrategy
+failOver=com.creaturelove.fault.tolerant.FailOverTolerantStrategy
+failSafe=com.creaturelove.fault.tolerant.FailSafeTolerantStrategy

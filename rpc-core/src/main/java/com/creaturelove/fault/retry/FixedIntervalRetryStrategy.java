@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 public class FixedIntervalRetryStrategy implements RetryStrategy{
 
     // fixed interval retry
-    public RpcResponse doRetry(Callable<RpcResponse> callable) throws ExecutionException, RetryException{
+    public RpcResponse doRetry(Callable<RpcResponse> callable) throws ExecutionException, RetryException {
         Retryer<RpcResponse> retryer = RetryerBuilder.<RpcResponse>newBuilder()
                 .retryIfExceptionOfType(Exception.class)
                 .withWaitStrategy(WaitStrategies.fixedWait(3L, TimeUnit.SECONDS))

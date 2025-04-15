@@ -7,6 +7,8 @@ import com.creaturelove.config.RpcConfig;
 import com.creaturelove.constant.RpcConstant;
 import com.creaturelove.fault.retry.RetryStrategy;
 import com.creaturelove.fault.retry.RetryStrategyFactory;
+import com.creaturelove.fault.tolerant.TolerantStrategy;
+import com.creaturelove.fault.tolerant.TolerantStrategyFactory;
 import com.creaturelove.loadbalancer.LoadBalancer;
 import com.creaturelove.loadbalancer.LoadBalancerFactory;
 import com.creaturelove.model.RpcRequest;
@@ -63,11 +65,21 @@ public class ServiceProxy implements InvocationHandler {
             requestParams.put("methodName", rpcRequest.getMethodName());
             ServiceMetaInfo selectedServiceMetaInfo = loadBalancer.select(requestParams, serviceMetaInfoList);
 
-            // rpc request with retry mechanism
-            RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
-            RpcResponse rpcResponse = retryStrategy.doRetry(() ->
-                    VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo)
-            );
+            // Implement fail tolerant mechanism for rpc request
+            RpcResponse rpcResponse;
+            try {
+                // rpc request with retry mechanism using tcp protocol
+                RetryStrategy retryStrategy = RetryStrategyFactory.getInstance(rpcConfig.getRetryStrategy());
+                rpcResponse = retryStrategy.doRetry(() ->
+                        VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo)
+                );
+            }
+            // when there is an exception during retry, implement fault tolerance strategy
+            catch  (Exception e) {
+                TolerantStrategy tolerantStrategy = TolerantStrategyFactory.getInstance(rpcConfig.getTolerantStrategy());
+                rpcResponse = tolerantStrategy.doTolerant(null, e);
+            }
+
 //            // rpc request without retry mechanism using tcp protocol
 //            RpcResponse rpcResponse = VertxTcpClient.doRequest(rpcRequest, selectedServiceMetaInfo);
 
