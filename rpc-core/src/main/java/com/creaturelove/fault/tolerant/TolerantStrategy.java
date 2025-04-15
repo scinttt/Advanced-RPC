@@ -1,6 +1,5 @@
 package com.creaturelove.fault.tolerant;
 
-import com.creaturelove.model.RpcRequest;
 import com.creaturelove.model.RpcResponse;
 
 import java.util.Map;
