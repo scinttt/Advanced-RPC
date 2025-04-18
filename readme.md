@@ -79,607 +79,42 @@ Define Config, Constant, Exception, Fault, Load balancer, model, protocol, proxy
 # Advanced features:
 
 ## Global Configuration
-
-1. Define a default config entity
-
-    ```java
-    @Data
-    public class RpcConfig {
-    
-        /**
-         * 名称
-         */
-        private String name = "yu-rpc";
-    
-        /**
-         * 版本号
-         */
-        private String version = "1.0";
-    
-        /**
-         * 服务器主机名
-         */
-        private String serverHost = "localhost";
-    
-        /**
-         * 服务器端口号
-         */
-        private Integer serverPort = 8080;
-    
-        /**
-         * 序列化器
-         */
-        private String serializer = SerializerKeys.JDK;
-    
-        /**
-         * 负载均衡器
-         */
-        private String loadBalancer = LoadBalancerKeys.ROUND_ROBIN;
-    
-        /**
-         * 重试策略
-         */
-        private String retryStrategy = RetryStrategyKeys.NO;
-    
-        /**
-         * 容错策略
-         */
-        private String tolerantStrategy = TolerantStrategyKeys.FAIL_FAST;
-    
-        /**
-         * 模拟调用
-         */
-        private boolean mock = false;
-    
-        /**
-         * 注册中心配置
-         */
-        private RegistryConfig registryConfig = new RegistryConfig();
-    }
-    
-    ```
-
-2. Define how to load config
-
-    ```java
-    public class ConfigUtils {
-    
-        /**
-         * 加载配置对象
-         *
-         * @param tClass
-         * @param prefix
-         * @param <T>
-         * @return
-         */
-        public static <T> T loadConfig(Class<T> tClass, String prefix) {
-            return loadConfig(tClass, prefix, "");
-        }
-    
-        /**
-         * 加载配置对象，支持区分环境
-         *
-         * @param tClass
-         * @param prefix
-         * @param environment
-         * @param <T>
-         * @return
-         */
-        public static <T> T loadConfig(Class<T> tClass, String prefix, String environment) {
-            StringBuilder configFileBuilder = new StringBuilder("application");
-            if (StrUtil.isNotBlank(environment)) {
-                configFileBuilder.append("-").append(environment);
-            }
-            configFileBuilder.append(".properties");
-            Props props = new Props(configFileBuilder.toString());
-            return props.toBean(tClass, prefix);
-        }
-    }
-    ```
-
-3. Maintain the global configuration object
-
-```java
-@Slf4j
-public class RpcApplication {
-
-    private static volatile RpcConfig rpcConfig;
-
-    /**
-     * 框架初始化，支持传入自定义配置
-     *
-     * @param newRpcConfig
-     */
-    public static void init(RpcConfig newRpcConfig) {
-        rpcConfig = newRpcConfig;
-        log.info("rpc init, config = {}", newRpcConfig.toString());
-        // 注册中心初始化
-        RegistryConfig registryConfig = rpcConfig.getRegistryConfig();
-        Registry registry = RegistryFactory.getInstance(registryConfig.getRegistry());
-        registry.init(registryConfig);
-        log.info("registry init, config = {}", registryConfig);
-        // 创建并注册 Shutdown Hook，JVM 退出时执行操作
-        Runtime.getRuntime().addShutdownHook(new Thread(registry::destroy));
-    }
-
-    /**
-     * 初始化
-     */
-    public static void init() {
-        RpcConfig newRpcConfig;
-        try {
-            newRpcConfig = ConfigUtils.loadConfig(RpcConfig.class, RpcConstant.DEFAULT_CONFIG_PREFIX);
-        } catch (Exception e) {
-            // 配置加载失败，使用默认值
-            newRpcConfig = new RpcConfig();
-        }
-        init(newRpcConfig);
-    }
-
-    /**
-     * 获取配置
-     *
-     * @return
-     */
-    public static RpcConfig getRpcConfig() {
-        if (rpcConfig == null) {
-            synchronized (RpcApplication.class) {
-                if (rpcConfig == null) {
-                    init();
-                }
-            }
-        }
-        return rpcConfig;
-    }
-}
-
-```
-
+Help our RPC framework easily get configuration from a global configuration object
+Global Configuration Contains: 
+- name
+- version
+- serverHost
+- serverPort
+- ...
+   
 ## Mock Interface
-
-1. Add field “mock” in the RPC Config
-
-    ```java
-    @Data
-    public class RpcConfig {
-        ...
-        
-        /**
-         * 模拟调用
-         */
-        private boolean mock = false;
-    }
-    
-    ```
-
-2. Add MockServiceProxy
-
-    ```java
-    @Slf4j
-    public class MockServiceProxy implements InvocationHandler {
-    
-        /**
-         * 调用代理
-         *
-         * @return
-         * @throws Throwable
-         */
-        @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            // 根据方法的返回值类型，生成特定的默认值对象
-            Class<?> methodReturnType = method.getReturnType();
-            log.info("mock invoke {}", method.getName());
-            return getDefaultObject(methodReturnType);
-        }
-    
-        /**
-         * 生成指定类型的默认值对象（可自行完善默认值逻辑）
-         *
-         * @param type
-         * @return
-         */
-        private Object getDefaultObject(Class<?> type) {
-            // 基本类型
-            if (type.isPrimitive()) {
-                if (type == boolean.class) {
-                    return false;
-                } else if (type == short.class) {
-                    return (short) 0;
-                } else if (type == int.class) {
-                    return 0;
-                } else if (type == long.class) {
-                    return 0L;
-                }
-            }
-            // 对象类型
-            return null;
-        }
-    }
-    
-    ```
-
-3. Add getMockProxy method in proxyFactory
-
-    ```java
-    
-    public class ServiceProxyFactory {
-    
-        /**
-         * 根据服务类获取代理对象
-         *
-         * @param serviceClass
-         * @param <T>
-         * @return
-         */
-        public static <T> T getProxy(Class<T> serviceClass) {
-            if (RpcApplication.getRpcConfig().isMock()) {
-                return getMockProxy(serviceClass);
-            }
-    
-            return (T) Proxy.newProxyInstance(
-                    serviceClass.getClassLoader(),
-                    new Class[]{serviceClass},
-                    new ServiceProxy());
-        }
-    
-        /**
-         * 根据服务类获取 Mock 代理对象
-         *
-         * @param serviceClass
-         * @param <T>
-         * @return
-         */
-        public static <T> T getMockProxy(Class<T> serviceClass) {
-            return (T) Proxy.newProxyInstance(
-                    serviceClass.getClassLoader(),
-                    new Class[]{serviceClass},
-                    new MockServiceProxy());
-        }
-    }
-    ```
-
-4. Determine getServiceProxy or getMockProxy based on configuration file
-
-    ```java
-    RpcConfig rpc = ConfigUtils.loadConfig(RpcConfig.class, "rpc");
-    
-    UserService userService = null;
-    
-    if(rpc.isMock()){
-        userService = ServiceProxyFactory.getMockProxy(UserService.class);
-    }else{
-        userService = ServiceProxyFactory.getProxy(UserService.class);
-    }
-    ```
-
+When we can not access real remote service, mock service help us do the development, testing and debuging.
 
 ## SPI & Serializer
 
-Load Different Serializer through configuration file through SPI Loader
+Load a Different Serializer through the configuration file through the SPI Loader
+SPI Mechanism allow provider register its implementation to the system through specific configuration file and reflection, without the change of the original code, which improves the modularity and expansibility.
 
-1. **Implement different Serializer**
-    1. Jdk
-    2. Json
-    3. Hessian
-    4. Kyro
-2. **Register SPI**
-    1. SPI Loader will automatically load: resources/META-INF/services
-
-        ```yaml
-        jdk=com.creaturelove.serializer.JdkSerializer
-        ```
-
-    2. META-INF/rpc/custom/com.creaturelove.serializer.Serializer
-        1. User can add customized implementation class
-    3. META-INF/rpc/system/com.creaturelove.serializer.Serializer
-
-        ```yaml
-        jdk=com.creaturelove.serializer.JdkSerializer
-        hessian=com.creaturelove.serializer.HessianSerializer
-        json=com.creaturelove.serializer.JsonSerializer
-        kryo=com.creaturelove.serializer.KryoSerializer
-        ```
-
-3. **Update Serializer Factory, create Serializer through SPILoader**
-
-    ```java
-    public class SerializerFactory {
-    
-        static{
-            SpiLoader.load(Serializer.class);
-        }
-    
-        // old serializer map without SPI Loader
-    //    private static final Map<String, Serializer> KEY_SERIALIZER_MAP = new HashMap<String, Serializer>(){{
-    //        put(SerializerKeys.JDK, new JdkSerializer());
-    //        put(SerializerKeys.JSON, new JsonSerializer());
-    //        put(SerializerKeys.KRYO, new KryoSerializer());
-    //        put(SerializerKeys.HESSIAN, new HessianSerializer());
-    //    }};
-    
-        public static Serializer getInstance(String key){
-            return SpiLoader.getInstance(Serializer.class, key);
-        }
-    }
-    ```
-
-4. **Customize serializer in the [application.properties](http://application.properties) in both consumer & producer**
-
-    ```yaml
-    rpc.serializer=hessian
-    ```
+1. JDK Serializer
+2. JSON Serializer
+3. Hessian Serializer
+4. Kryo Serializer
+5. Protobuf Serializer
 
 
 ## Service Register(Etcd)
+Features:
+1. Distributed data storage
+2. Service Registration
+3. Service Discovery
+4. Health Check
+5. Service Destroy
 
-1. Install server
-
-    ```yaml
-    docker run -d \
-      --name etcd \
-      --hostname etcd \
-      -p 2379:2379 -p 2380:2380 \
-      quay.io/coreos/etcd:v3.5.13 \
-      /usr/local/bin/etcd \
-      --name my-etcd \
-      --data-dir /etcd-data \
-      --listen-client-urls http://0.0.0.0:2379 \
-      --advertise-client-urls http://etcd:2379 \
-      --listen-peer-urls http://0.0.0.0:2380 \
-      --initial-advertise-peer-urls http://etcd:2380 \
-      --initial-cluster my-etcd=http://etcd:2380 \
-      --initial-cluster-state new \
-      --initial-cluster-token etcd-cluster-1
-    ```
-
-
-port 2379: provide HTTP API service, interact with etcdctl
-
-port 2380: communication within the cluster
-
-1. Jetcd is the java client of etcd
-2. Demo
-
-    ```java
-    public class EtcdRegistry {
-        public static void main(String[] args) throws ExecutionException, InterruptedException {
-            // create client using endpoints
-            Client client = Client.builder().endpoints("http://localhost:2379")
-                    .build();
-    
-            KV kvClient = client.getKVClient();
-            ByteSequence key = ByteSequence.from("test_key".getBytes());
-            ByteSequence value = ByteSequence.from("test_value".getBytes());
-    
-            // put the key-value
-            kvClient.put(key, value).get();
-    
-            // get the CompletableFuture
-            CompletableFuture<GetResponse> getFuture = kvClient.get(key);
-    
-            // get the value from CompletableFuture
-            GetResponse response = getFuture.get();
-    
-            // delete the key
-            kvClient.delete(key).get();
-        }
-    }
-    
-    ```
-
-3. Set ServiceMetaData Model
-
-    ```java
-    @Data
-    public class ServiceMetaInfo {
-        private String serviceName;
-    
-        private String serviceVersion = "1.0";
-    
-        private String serviceHost;
-    
-        private Integer servicePort;
-    
-        private String serviceGroup = "default";
-    
-        public String getServiceKey(){
-            return String.format("%s:%s", serviceName, serviceVersion);
-        }
-    
-        public String getServiceNodeKey(){
-            return String.format("%s/%s:%s", getServiceKey(), serviceHost, servicePort);
-        }
-    
-        public String getServiceAddress(){
-            if(!StrUtil.contains(serviceHost, "http")){
-                return String.format("http://%s:%s", serviceHost, servicePort);
-            }
-            return String.format("%s:%s", serviceHost, servicePort);
-        }
-    }
-    ```
-
-4. Setup RegistryConfig in the config package
-
-    ```java
-    @Data
-    public class RegistryConfig {
-        private String registry = "etcd";
-    
-        private String address = "http://localhost:2380";
-    
-        private String username;
-    
-        private String password;
-    
-        private Long timeout = 10000L;
-    }
-    ```
-
-5. Registry Interface & Registry Implementation
-
-    ```java
-    public interface Registry {
-    
-        // Initialization
-        void init(RegistryConfig registryConfig);
-    
-        // Register Service
-        void register(ServiceMetaInfo serviceMetaInfo) throws Exception;
-    
-        // Unregister Service
-        void unRegister(ServiceMetaInfo serviceMetaInfo);
-    
-        // ServiceDiscovery
-        List<ServiceMetaInfo> serviceDiscovery(String serviceKey);
-    
-        // Service Destroy
-        void destroy();
-    }
-    
-    ```
-
-    ```java
-    public class EtcdRegistry implements Registry {
-        private Client client;
-    
-        private KV kvClient;
-    
-        private static final String ETCD_ROOT_PATH = "/rpc/";
-    
-        @Override
-        public void init(RegistryConfig registryConfig){
-            client = Client.builder()
-                    .endpoints(registryConfig.getAddress())
-                    .connectTimeout(Duration.ofMillis(registryConfig.getTimeout()))
-                    .build();
-            kvClient = client.getKVClient();
-        }
-    
-        @Override
-        public void register(ServiceMetaInfo serviceMetaInfo) throws Exception{
-            // create a lease client
-            Lease leaseClient = client.getLeaseClient();
-    
-            // create a 30s lease
-            long leaseId = leaseClient.grant(30).get().getID();
-    
-            // store key-value pairs
-            String registerKey = ETCD_ROOT_PATH + serviceMetaInfo.getServiceNodeKey();
-            ByteSequence key = ByteSequence.from(registerKey, StandardCharsets.UTF_8);
-            ByteSequence value = ByteSequence.from(JSONUtil.toJsonStr(serviceMetaInfo), StandardCharsets.UTF_8);
-    
-            // connect the key-value pair with the lease, and set TTL
-            PutOption putOption = PutOption.builder().withLeaseId(leaseId).build();
-            kvClient.put(key, value, putOption).get();
-        }
-    
-        public void unRegister(ServiceMetaInfo serviceMetaInfo){
-            kvClient.delete(ByteSequence.from(ETCD_ROOT_PATH + serviceMetaInfo.getServiceNodeKey(), StandardCharsets.UTF_8));
-        }
-    
-        public List<ServiceMetaInfo> serviceDiscovery(String serviceKey){
-            String searchPrefix = ETCD_ROOT_PATH + serviceKey + "/";
-    
-            try{
-                //prefix search
-                GetOption getOption = GetOption.builder().isPrefix(true).build();
-                List<KeyValue> keyValues = kvClient.get(
-                        ByteSequence.from(searchPrefix, StandardCharsets.UTF_8),
-                        getOption)
-                        .get()
-                        .getKvs();
-                // parse service info
-                return keyValues.stream()
-                        .map(keyValue -> {
-                            String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
-                            return JSONUtil.toBean(value, ServiceMetaInfo.class);
-                        })
-                        .collect(Collectors.toList());
-            }catch(Exception e){
-                throw new RuntimeException("Failed to retrieve the service list", e);
-            }
-        }
-    
-        public void destroy(){
-            System.out.println("Current Node Destroy");
-    
-            // Release resources
-            if(kvClient != null){
-                kvClient.close();
-            }
-            if(client != null){
-                client.close();
-            }
-        }
-    }
-    
-    ```
-
-6. Registry Factory
-
-    ```java
-    public class RegistryFactory {
-        static{
-            SpiLoader.load(Registry.class);
-        }
-    
-        private static final Registry DEFAULT_REGISTRY = new EtcdRegistry();
-    
-        public static Registry getInstance(String key){
-            return SpiLoader.getInstance(Registry.class, key);
-        }
-    }
-    ```
-
-7. ServiceProxy call provider through Registry
-
-    ```java
-     // get provider address from registry center
-      RpcConfig rpcConfig = RpcApplication.getRpcConfig();
-      Registry registry = RegistryFactory.getInstance(rpcConfig.getRegistryConfig().getRegistry());
-      ServiceMetaInfo serviceMetaInfo = new ServiceMetaInfo();
-      serviceMetaInfo.setServiceName(method.getDeclaringClass().getName());
-      serviceMetaInfo.setServiceVersion(RpcConstant.DEFAULT_SERVICE_VERSION);
-    
-      List<ServiceMetaInfo> serviceMetaInfoList = registry.serviceDiscovery(serviceMetaInfo.getServiceKey());
-    
-      if(CollUtil.isEmpty(serviceMetaInfoList)){
-          throw new RuntimeException("service address temporarily doesn't exist");
-      }
-    
-      // get first one
-      ServiceMetaInfo selectedServiceMetaInfo = serviceMetaInfoList.get(0);
-      
-      // Provider Address
-      String providerAddress = selectedServiceMetaInfo.getServiceAddress();
-    ```
-
-8. Provider register the service to the Registry
-
-    ```java
-    // register the service to Local Registry
-    String serviceName = UserService.class.getName();
-    LocalRegistry.register(serviceName, UserServiceImpl.class);
-    
-    // register the service to Registry Center
-    RpcConfig rpcConfig = RpcApplication.getRpcConfig();
-    RegistryConfig registryConfig = rpcConfig.getRegistryConfig();
-    Registry registry = RegistryFactory.getInstance(registryConfig.getRegistry());
-    ServiceMetaInfo serviceMetaInfo = new ServiceMetaInfo();
-    serviceMetaInfo.setServiceName(serviceName);
-    serviceMetaInfo.setServiceHost(rpcConfig.getServerHost());
-    serviceMetaInfo.setServicePort(rpcConfig.getServerPort());
-    
-    try{
-        registry.register(serviceMetaInfo);
-    }catch(Exception e){
-        throw new RuntimeException(e);
-    }
-    
-    ```
-
-
+Etcd:
+1. Etcd is a distributed key-value pair database based on Go.
+2. Mainly used for the service discovery, configuration management, and distributed lock.
+3. Ensure data Consistency through Raft Alogrithm
+   
 ## Registry Optimization
 
 1. HeartBeat Check Mechanism
@@ -691,23 +126,17 @@ port 2380: communication within the cluster
         3. Provider regularly renew the registration TTL
 2. Service Node Destroy
     1. Active Offline
-
        provider exit the service and delete it from regitry center
-
     2. Passive Offline
-
        when there is an exception and exit the service, we deelte the service through Etcd’s key expiration mechanism
 
 3. Add consumer Service Cache
-
    Cache the service into consumer to improve the performance.
-
     1. Add local cache
     2. Use local cache
     3. Listen the change of Service Registry and update the cache
 
 ## Customized Protocol
-
 1. Protocol Message Design
     1. Magic Number
         1. security verification (Like Https Certification)
@@ -782,30 +211,7 @@ port 2380: communication within the cluster
     1. @EnableRpc
     2. @RpcService
     3. @RpcReference
-3. Implement RpcProviderBootstrap
-    1. Retrieve all the class annotated with @RpcService
-        1. make the Bootstrap class implements the BeanPostProcessor interface and override postProcessAfterInitialization method
-    2. Retrieve the information of those classes through reflection, then finish the service registration
-4. Implement RpcConsumerBootstrap
-
-   Retrieve all the attributes of the bean after bean initialization through Reflection just like provider. If the field contains @RpcReference, generate the proxy object and assign the value for that field.
-
-5. Import the bootstrap class into @EnableRpc
-
-    ```java
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.RUNTIME)
-    @Import({RpcInitBootstrap.class, RpcConsumerBootstrap.class, RpcProviderBootstrap.class})
-    public @interface EnableRpc {
-    
-        // need to start server
-        boolean needServer() default true;
-    }
-    ```
-
-
-# Future Expansion
-
+# Upcomming Features:
 1. Add RequestParameter List in RpcRequest
     1. Provider Parameter List
     2. Consumer Parameter List
@@ -816,15 +222,11 @@ port 2380: communication within the cluster
 3. Support multiple type configuration file as global configuration like yml/yaml
     1. SPI mechanism allow developer expand configuration parser
 4. Interceptor
-
    Add execution before or after the service call
-
     1. Log verification
     2. Security verification
 5. Customized Exception
-
    Make the error message clearer
-
     1. Customize RpcException according to ErrorCode
     2. ConsumerException
     3. RegistryCenterException
@@ -840,4 +242,4 @@ port 2380: communication within the cluster
 12. Optimize the Cache Mechanism of Service Registry
     1. Distinguish the service key, use a map to maintain multiple service information
 13. Add TTL for Service Registration, refresh the cache regularly
-    1. Implement cache with Caffeine
+    1. Implement the cache with Caffeine
