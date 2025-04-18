@@ -1,4 +1,7 @@
-# Basic Outline
+# Overview
+This RPC Framework is based on Java + Etcd + Vert.x + Customized Protocol.
+This allows the developer to call the remote service using a local method through an annotation and a configuration file.
+Also support Serializer, Loadbalancer, Retry Strategy, and Fault Tolerant Strategy.
 
 ## Consumer
 
