@@ -64,7 +64,7 @@ Provide Data Entities and Service Interfaces
 
 RegistryCenter Architecture:
 
-![image.png](attachment:d83c8c06-dbb2-43b3-a3e2-15ae191aa2fc:image.png)
+https://www.notion.so/creaturelove/MyRPC-Documentation-1c29a634e84f80cea994dfef17b94e21?pvs=4#1cb9a634e84f8026abd1d63811bb45e4
 
 Service Cache Update - Listening Machenism
 
